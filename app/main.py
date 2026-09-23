@@ -9,10 +9,11 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from app import db
 from app.config import Settings
+from app.console import load_console_page
 from app.errors import error_body, register_error_handlers
 from app.log_redaction import install_access_log_redaction
 from app.routes import download, files, links
@@ -84,6 +85,14 @@ def create_app(settings: Settings | None = None, clock: Clock = time.time) -> Fa
     app.include_router(files.router)
     app.include_router(links.router)
     app.include_router(download.router)
+
+    # Loaded once at startup; a missing or malformed page fails fast.
+    console = load_console_page()
+
+    @app.get("/", include_in_schema=False)
+    def web_console() -> HTMLResponse:
+        """Browser console for the API (vanilla JS, same-origin only, strict CSP)."""
+        return HTMLResponse(console.html, headers=console.headers)
 
     @app.get("/healthz", tags=["health"], summary="Liveness probe")
     def healthz() -> dict[str, str]:

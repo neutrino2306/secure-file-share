@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Secure File Share Console</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5a6574;
+  --line: #dce1e8;
+  --line-strong: #c3cad5;
+  --accent: #2a4dc4;
+  --accent-ink: #ffffff;
+  --accent-soft: #e9eefb;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --ok: #1e7b4e;
+  --ok-soft: #e5f3eb;
+  --notch: var(--bg);
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10141a;
+    --surface: #181d25;
+    --ink: #e4e8ee;
+    --muted: #98a3b2;
+    --line: #28303b;
+    --line-strong: #3a4452;
+    --accent: #85a1f5;
+    --accent-ink: #10141a;
+    --accent-soft: #1d2642;
+    --danger: #f28b82;
+    --danger-soft: #3a1f1d;
+    --ok: #74cf9b;
+    --ok-soft: #173024;
+  }
+}
+* { box-sizing: border-box; }
+/* Class-level display rules must never override the hidden attribute. */
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  font: 15px/1.5 var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 1.5rem; line-height: 1.25; font-weight: 650; letter-spacing: -0.015em; }
+h2 { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.005em; }
+.muted { color: var(--muted); }
+.small { font-size: 0.8125rem; }
+.mono { font-family: var(--mono); font-size: 0.8125rem; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.85rem clamp(1rem, 4vw, 2.5rem);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+.brand-mark {
+  position: relative; width: 24px; height: 24px; border-radius: 7px; background: var(--accent);
+}
+.brand-mark::before {
+  content: ""; position: absolute; left: 50%; top: 6px; width: 7px; height: 7px;
+  margin-left: -3.5px; border-radius: 50%; background: var(--accent-ink);
+}
+.brand-mark::after {
+  content: ""; position: absolute; left: 50%; top: 11px; width: 3px; height: 7px;
+  margin-left: -1.5px; border-radius: 1px; background: var(--accent-ink);
+}
+.session { display: flex; align-items: center; gap: 0.75rem; }
+.status { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.8125rem; color: var(--muted); }
+.status::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong);
+}
+.status[data-state="on"] { color: var(--ink); }
+.status[data-state="on"]::before { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.docs-link { font-size: 0.8125rem; color: var(--muted); text-decoration: none; }
+.docs-link:hover { color: var(--ink); text-decoration: underline; }
+
+/* Layout */
+main { max-width: 68rem; margin: 0 auto; padding: 2rem clamp(1rem, 4vw, 2.5rem) 4rem; }
+.stack > * + * { margin-top: 1.75rem; }
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m);
+}
+.panel-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--line);
+}
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+
+/* Connect */
+.connect { max-width: 34rem; margin: 10vh auto 0; padding: 2rem; }
+.connect .lede { margin-top: 0.5rem; color: var(--muted); max-width: 30rem; }
+.field-row { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+input[type="password"], input[type="text"] {
+  flex: 1; min-width: 0; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-s); padding: 0.55rem 0.75rem;
+}
+input[type="password"]:focus, input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+.field-error { margin-top: 0.75rem; color: var(--danger); font-size: 0.875rem; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  font: inherit; font-size: 0.875rem; font-weight: 560; line-height: 1.2;
+  padding: 0.55rem 0.95rem; border-radius: var(--radius-s); border: 1px solid transparent;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-soft { background: var(--accent-soft); color: var(--accent); }
+.btn-soft:hover { border-color: var(--accent); }
+.btn-quiet { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn-quiet:hover { background: var(--bg); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger-quiet { background: transparent; color: var(--danger); }
+.btn-danger-quiet:hover { background: var(--danger-soft); }
+.btn-small { font-size: 0.8125rem; padding: 0.38rem 0.7rem; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: var(--radius-s);
+  border: 0; background: transparent; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.icon-btn:hover { background: var(--bg); color: var(--ink); }
+
+/* Upload */
+.dropzone {
+  display: grid; place-items: center; text-align: center; gap: 0.35rem;
+  padding: 2.5rem 1.5rem; border: 2px dashed var(--line-strong); border-radius: var(--radius-m);
+  background: var(--surface); cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.dropzone:hover { border-color: var(--accent); }
+.dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop-title { font-weight: 600; font-size: 1rem; }
+.link-like { color: var(--accent); font-weight: 560; text-decoration: underline; text-underline-offset: 2px; }
+.uploads { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.upload {
+  display: grid; grid-template-columns: minmax(0, 1fr) 10rem 14rem; align-items: center; gap: 1rem;
+  padding: 0.55rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s);
+  font-size: 0.875rem;
+}
+.upload-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-status { color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload.done .upload-status { color: var(--ok); }
+.upload.failed .upload-status { color: var(--danger); }
+progress {
+  appearance: none; -webkit-appearance: none; width: 100%; height: 5px; border: 0; border-radius: 3px;
+  background: var(--line); overflow: hidden;
+}
+progress::-webkit-progress-bar { background: var(--line); border-radius: 3px; }
+progress::-webkit-progress-value { background: var(--accent); border-radius: 3px; }
+progress::-moz-progress-bar { background: var(--accent); border-radius: 3px; }
+.upload.failed progress::-webkit-progress-value { background: var(--danger); }
+.upload.failed progress::-moz-progress-bar { background: var(--danger); }
+
+/* Signed link tickets */
+.tickets { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.ticket {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 10rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m);
+}
+.ticket::before, .ticket::after {
+  content: ""; position: absolute; right: calc(10rem - 8px); width: 16px; height: 16px;
+  border-radius: 50%; background: var(--notch); border: 1px solid var(--line);
+}
+.ticket::before { top: -9px; clip-path: inset(50% 0 0 0); }
+.ticket::after { bottom: -9px; clip-path: inset(0 0 50% 0); }
+.ticket-main { padding: 1rem 1.25rem; display: grid; gap: 0.55rem; min-width: 0; }
+.ticket-file { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.url-row { display: flex; gap: 0.5rem; align-items: center; }
+.url-row input { font-family: var(--mono); font-size: 0.8125rem; padding: 0.42rem 0.6rem; color: var(--muted); }
+.ticket-stub {
+  display: grid; align-content: center; justify-items: center; gap: 0.2rem; padding: 1rem;
+  border-left: 2px dashed var(--line-strong); background: var(--accent-soft);
+  border-radius: 0 calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px) 0;
+}
+.countdown {
+  font-size: 1.85rem; font-weight: 680; letter-spacing: -0.02em; line-height: 1.1;
+  font-variant-numeric: tabular-nums; color: var(--accent);
+}
+.stub-label { font-size: 0.75rem; color: var(--muted); }
+.ticket-stub progress { margin-top: 0.45rem; height: 4px; }
+.ticket.ended .ticket-stub { background: var(--danger-soft); }
+.ticket.ended .countdown { color: var(--danger); font-size: 1.3rem; }
+.ticket.ended .ticket-stub progress { visibility: hidden; }
+.ticket.ended .url-row input { text-decoration: line-through; }
+.ticket-remove { position: absolute; top: 0.35rem; right: calc(10rem + 0.35rem); }
+
+/* Files table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 0.8125rem; font-weight: 600; color: var(--muted);
+  padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+td { padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.file-cell { display: grid; gap: 0.1rem; min-width: 12rem; max-width: 26rem; }
+.filename { font-weight: 560; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hash { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.when { white-space: nowrap; color: var(--muted); font-size: 0.875rem; }
+.nowrap { white-space: nowrap; }
+.actions { display: flex; gap: 0.35rem; justify-content: flex-end; }
+.empty { padding: 2.5rem 1.25rem; text-align: center; color: var(--muted); }
+.pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.75rem 1.25rem; border-top: 1px solid var(--line); font-size: 0.8125rem;
+}
+.pager .btn + .btn { margin-left: 0.4rem; }
+
+/* Dialogs */
+dialog {
+  --notch: var(--surface);
+  width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 3rem);
+  padding: 0; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 30px 70px -25px rgba(10, 20, 40, 0.45);
+}
+dialog.wide { width: min(58rem, calc(100vw - 2rem)); }
+dialog::backdrop { background: rgba(12, 18, 28, 0.45); }
+dialog[open] { animation: dialog-in 0.16s ease-out; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.99); } }
+.dialog-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1rem 1.25rem 0.75rem 1.5rem;
+}
+.dialog-body { padding: 0 1.5rem 1.25rem; display: grid; gap: 1rem; }
+.dialog-actions {
+  display: flex; justify-content: flex-end; gap: 0.5rem;
+  padding: 1rem 1.5rem; border-top: 1px solid var(--line);
+}
+.dialog-body strong { font-weight: 600; word-break: break-all; }
+fieldset { border: 0; margin: 0; padding: 0; }
+legend { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+.segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span {
+  display: block; text-align: center; padding: 0.55rem 0.5rem; font-size: 0.875rem; font-weight: 560;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-s); cursor: pointer;
+}
+.segmented label:hover span { background: var(--bg); }
+.segmented input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.audit-wrap { max-height: 60vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-s); }
+.audit-wrap th { position: sticky; top: 0; background: var(--surface); padding: 0.55rem 0.9rem; }
+.audit-wrap td { padding: 0.6rem 0.9rem; font-size: 0.875rem; }
+.event {
+  display: inline-block; padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  background: var(--bg); color: var(--muted); white-space: nowrap;
+}
+.event-link { background: var(--accent-soft); color: var(--accent); }
+.event-download { background: var(--ok-soft); color: var(--ok); }
+.event-delete { background: var(--danger-soft); color: var(--danger); }
+
+/* Toasts */
+.toasts {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 10;
+  display: grid; gap: 0.5rem; width: min(24rem, calc(100vw - 2.5rem));
+}
+.toast {
+  padding: 0.75rem 1rem; border-radius: var(--radius-s); font-size: 0.875rem;
+  background: var(--ink); color: var(--bg); box-shadow: 0 12px 30px -12px rgba(10, 20, 40, 0.5);
+  animation: dialog-in 0.16s ease-out;
+}
+.toast-error { background: var(--danger); color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 720px) {
+  .ticket { grid-template-columns: 1fr; }
+  .ticket::before, .ticket::after { display: none; }
+  .ticket-stub {
+    border-left: 0; border-top: 2px dashed var(--line-strong);
+    border-radius: 0 0 calc(var(--radius-m) - 1px) calc(var(--radius-m) - 1px);
+    grid-template-columns: auto 1fr; justify-items: start; align-items: baseline; column-gap: 0.6rem;
+  }
+  .ticket-stub progress { grid-column: 1 / -1; }
+  .ticket-remove { right: 0.35rem; }
+  .url-row { flex-wrap: wrap; }
+  .url-row input { flex-basis: 100%; }
+  .section-head { flex-direction: column; gap: 0.25rem; }
+  .topbar { padding-top: 0.7rem; padding-bottom: 0.7rem; }
+  th, td { padding-left: 0.9rem; padding-right: 0.9rem; }
+  .file-cell { min-width: 0; max-width: 12rem; }
+  .actions { flex-direction: column; align-items: stretch; }
+  .segmented { grid-template-columns: repeat(2, 1fr); }
+  .upload { grid-template-columns: minmax(0, 1fr) auto; }
+  .upload progress { grid-column: 1 / -1; grid-row: 2; }
+  .hide-narrow { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>Secure File Share</span></div>
+  <div class="session">
+    <a class="docs-link hide-narrow" href="/docs" target="_blank" rel="noopener noreferrer">API docs</a>
+    <span id="status" class="status hide-narrow" data-state="off">Not connected</span>
+    <button id="disconnect" class="btn btn-quiet btn-small" type="button" hidden>Disconnect</button>
+  </div>
+</header>
+
+<main>
+  <section id="connect-view" class="panel connect" aria-labelledby="connect-title">
+    <h1 id="connect-title">Connect to your files</h1>
+    <p class="lede">Enter your API key. It is kept only in this tab's memory and is cleared when you reload or close the page.</p>
+    <div class="field-row">
+      <label for="api-key" class="sr-only">API key</label>
+      <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="API key">
+      <button id="connect" class="btn btn-primary" type="button">Connect</button>
+    </div>
+    <p id="connect-error" class="field-error" role="alert" hidden></p>
+  </section>
+
+  <div id="workspace" class="stack" hidden>
+    <section aria-label="Upload files">
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="drop-hint">
+        <p class="drop-title">Drop files here to upload</p>
+        <p id="drop-hint" class="muted">or <span class="link-like">choose files</span> from your computer. Uploaded files stay private until you create a link.</p>
+      </div>
+      <input id="file-input" type="file" multiple hidden>
+      <ul id="uploads" class="uploads" aria-live="polite"></ul>
+    </section>
+
+    <section id="links-section" aria-labelledby="links-title" hidden>
+      <div class="section-head">
+        <h2 id="links-title">Links created in this session</h2>
+        <p class="muted small">Anyone with a link can download the file until it expires.</p>
+      </div>
+      <ul id="tickets" class="tickets"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="files-title">
+      <div class="panel-head">
+        <h2 id="files-title">Your files</h2>
+        <button id="refresh" class="btn btn-quiet btn-small" type="button">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col" class="num">Size</th>
+              <th scope="col" class="hide-narrow">Uploaded</th>
+              <th scope="col" class="num hide-narrow">Links</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="file-rows"></tbody>
+        </table>
+      </div>
+      <p id="files-empty" class="empty" hidden>No files yet. Drop a file above to upload your first one.</p>
+      <div class="pager">
+        <span id="page-info" class="muted"></span>
+        <div>
+          <button id="prev" class="btn btn-quiet btn-small" type="button">Previous</button>
+          <button id="next" class="btn btn-quiet btn-small" type="button">Next</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<dialog id="share-dialog" aria-labelledby="share-title">
+  <div class="dialog-head">
+    <h2 id="share-title">Create a download link</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dialog-body">
+    <p class="muted">Anyone with the link can download <strong id="share-filename"></strong> without an API key until the link expires.</p>
+    <fieldset>
+      <legend>Link expires after</legend>
+      <div class="segmented">
+        <label><input type="radio" name="ttl" value="900" checked><span>15 minutes</span></label>
+        <label><input type="radio" name="ttl" value="3600"><span>1 hour</span></label>
+        <label><input type="radio" name="ttl" value="86400"><span>1 day</span></label>
+        <label><input type="radio" name="ttl" value="604800"><span>7 days</span></label>
+      </div>
+    </fieldset>
+    <div id="share-result"></div>
+  </div>
+  <div class="dialog-actions">
+    <button class="btn btn-quiet" type="button" data-close>Done</button>
+    <button id="share-create" class="btn btn-primary" type="button">Create link</button>
+  </div>
+</dialog>
+
+<dialog id="audit-dialog" class="wide" aria-labelledby="audit-title">
+  <div class="dialog-head">
+    <h2 id="audit-title">Activity</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dialog-body">
+    <p class="muted">Every upload, link and download of <strong id="audit-filename"></strong>, newest first.</p>
+    <div class="audit-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Event</th>
+            <th scope="col">By</th>
+            <th scope="col">Details</th>
+            <th scope="col">IP address</th>
+          </tr>
+        </thead>
+        <tbody id="audit-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <div class="dialog-head">
+    <h2 id="confirm-title">Delete file?</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dialog-body">
+    <p><strong id="confirm-filename"></strong> will be deleted. Links you have shared for it stop working immediately.</p>
+  </div>
+  <div class="dialog-actions">
+    <button class="btn btn-quiet" type="button" data-close>Cancel</button>
+    <button id="confirm-delete" class="btn btn-danger" type="button">Delete file</button>
+  </div>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+(() => {
+  // All state lives in memory. The API key is never written to any browser storage.
+  const state = {
+    apiKey: null,
+    offset: 0,
+    limit: 20,
+    total: 0,
+    links: [],
+    shareFile: null,
+    pendingDelete: null,
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  const EVENT_LABELS = {
+    "file.uploaded": ["Uploaded", "event"],
+    "link.created": ["Link created", "event event-link"],
+    "file.downloaded": ["Downloaded", "event event-download"],
+    "file.deleted": ["Deleted", "event event-delete"],
+  };
+
+  class ApiError extends Error {
+    constructor(status, code, message) {
+      super(message);
+      this.status = status;
+      this.code = code;
+    }
+  }
+
+  // Minimal DOM builder. Text is always inserted as text nodes (never parsed as HTML).
+  function h(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key === "class") node.className = value;
+      else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value === true ? "" : String(value));
+    }
+    for (const child of [].concat(children)) {
+      if (child === undefined || child === null || child === false) continue;
+      node.append(child instanceof Node ? child : String(child));
+    }
+    return node;
+  }
+
+  // ---------- Formatting ----------
+  function formatBytes(bytes) {
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let value = bytes;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    const text = unit === 0 ? String(value) : value.toFixed(value < 10 ? 1 : 0);
+    return `${text} ${units[unit]}`;
+  }
+
+  function formatDate(iso, withSeconds = false) {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return String(iso);
+    return date.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: withSeconds ? "medium" : "short",
+    });
+  }
+
+  function formatRemaining(ms) {
+    // Round up so the display reaches 00:00 exactly when the link expires.
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const pad = (n) => String(n).padStart(2, "0");
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    if (days > 0) return `${days}d ${pad(hours)}h`;
+    if (hours > 0) return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+    return `${pad(minutes)}:${pad(seconds)}`;
+  }
+
+  function shortId(id) {
+    return typeof id === "string" ? id.slice(0, 8) : "";
+  }
+
+  function isHttpUrl(value) {
+    try {
+      const url = new URL(value, window.location.href);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  // ---------- Feedback ----------
+  function toast(message, kind = "info") {
+    const node = h("div", { class: `toast toast-${kind}`, role: kind === "error" ? "alert" : "status" }, message);
+    $("toasts").append(node);
+    setTimeout(() => node.remove(), kind === "error" ? 7000 : 3500);
+  }
+
+  function describe(err) {
+    return err instanceof ApiError ? err.message : "Something went wrong. Try again.";
+  }
+
+  function handleError(err, context) {
+    if (err instanceof ApiError && err.status === 401 && state.apiKey) {
+      disconnect("The server rejected your API key. Connect again with a valid key.");
+      return;
+    }
+    toast(context ? `${context}. ${describe(err)}` : describe(err), "error");
+  }
+
+  function setBusy(button, busy) {
+    button.disabled = busy;
+    button.setAttribute("aria-busy", busy ? "true" : "false");
+  }
+
+  // ---------- API ----------
+  function errorFromBody(status, body, fallback) {
+    const error = body && typeof body === "object" && body.error ? body.error : {};
+    return new ApiError(
+      status,
+      typeof error.code === "string" ? error.code : `http_${status}`,
+      typeof error.message === "string" && error.message ? error.message : fallback
+    );
+  }
+
+  async function api(path, { method = "GET", json } = {}) {
+    const headers = { "X-API-Key": state.apiKey };
+    const init = { method, headers, cache: "no-store", credentials: "omit" };
+    if (json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(json);
+    }
+    let response;
+    try {
+      response = await fetch(path, init);
+    } catch {
+      throw new ApiError(0, "network_error", "Could not reach the server. Check your connection.");
+    }
+    if (response.status === 204) return null;
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    if (!response.ok) throw errorFromBody(response.status, body, `Request failed (HTTP ${response.status})`);
+    return body;
+  }
+
+  // XMLHttpRequest instead of fetch so upload progress can be shown.
+  function uploadWithProgress(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/v1/files");
+      xhr.setRequestHeader("X-API-Key", state.apiKey);
+      xhr.responseType = "json";
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) onProgress(event.loaded / event.total);
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.response);
+        else reject(errorFromBody(xhr.status, xhr.response, `Upload failed (HTTP ${xhr.status})`));
+      });
+      xhr.addEventListener("error", () => {
+        reject(new ApiError(0, "network_error", "Upload failed. The file may exceed the server's size limit."));
+      });
+      const form = new FormData();
+      form.append("file", file);
+      xhr.send(form);
+    });
+  }
+
+  // ---------- Session ----------
+  function showWorkspace(connected) {
+    $("connect-view").hidden = connected;
+    $("workspace").hidden = !connected;
+    $("disconnect").hidden = !connected;
+    const status = $("status");
+    status.dataset.state = connected ? "on" : "off";
+    status.textContent = connected ? "Connected" : "Not connected";
+  }
+
+  function showConnectError(message) {
+    const node = $("connect-error");
+    node.textContent = message || "";
+    node.hidden = !message;
+  }
+
+  async function connect() {
+    const input = $("api-key");
+    const key = input.value.trim();
+    if (!key) {
+      showConnectError("Enter an API key to continue.");
+      input.focus();
+      return;
+    }
+    const button = $("connect");
+    setBusy(button, true);
+    showConnectError("");
+    state.apiKey = key;
+    state.offset = 0;
+    try {
+      await loadFiles();
+      input.value = "";
+      showWorkspace(true);
+    } catch (err) {
+      state.apiKey = null;
+      showConnectError(err instanceof ApiError && err.status === 401 ? "That API key was not accepted." : describe(err));
+    } finally {
+      setBusy(button, false);
+    }
+  }
+
+  function disconnect(message) {
+    state.apiKey = null;
+    state.links = [];
+    state.total = 0;
+    state.offset = 0;
+    state.shareFile = null;
+    state.pendingDelete = null;
+    for (const dialog of document.querySelectorAll("dialog[open]")) dialog.close();
+    $("file-rows").replaceChildren();
+    $("tickets").replaceChildren();
+    $("uploads").replaceChildren();
+    $("links-section").hidden = true;
+    showWorkspace(false);
+    showConnectError(message || "");
+    $("api-key").focus();
+  }
+
+  // ---------- Files ----------
+  async function loadFiles() {
+    const data = await api(`/v1/files?limit=${state.limit}&offset=${state.offset}`);
+    if (data.items.length === 0 && state.offset > 0 && data.total > 0) {
+      state.offset = Math.max(0, state.offset - state.limit);
+      return loadFiles();
+    }
+    state.total = data.total;
+    renderFiles(data.items);
+  }
+
+  function refreshFiles() {
+    loadFiles().catch((err) => handleError(err, "Could not load files"));
+  }
+
+  function renderFiles(items) {
+    const rows = items.map((file) =>
+      h("tr", {}, [
+        h("td", {}, h("div", { class: "file-cell" }, [
+          h("span", { class: "filename", title: file.filename }, file.filename),
+          h("span", { class: "hash", title: `SHA-256 ${file.sha256}` }, `SHA-256 ${String(file.sha256).slice(0, 12)}`),
+        ])),
+        h("td", { class: "num" }, formatBytes(file.size_bytes)),
+        h("td", { class: "when hide-narrow" }, h("time", { datetime: file.created_at }, formatDate(file.created_at))),
+        h("td", { class: "num hide-narrow" }, String(file.link_count)),
+        h("td", {}, h("div", { class: "actions" }, [
+          h("button", { class: "btn btn-soft btn-small", type: "button", "aria-label": `Share ${file.filename}`, onclick: () => openShare(file) }, "Share"),
+          h("button", { class: "btn btn-quiet btn-small", type: "button", "aria-label": `Activity for ${file.filename}`, onclick: () => openAudit(file) }, "Activity"),
+          h("button", { class: "btn btn-danger-quiet btn-small", type: "button", "aria-label": `Delete ${file.filename}`, onclick: () => confirmDelete(file) }, "Delete"),
+        ])),
+      ])
+    );
+    $("file-rows").replaceChildren(...rows);
+    $("files-empty").hidden = items.length > 0;
+
+    const start = state.total === 0 ? 0 : state.offset + 1;
+    const end = state.offset + items.length;
+    $("page-info").textContent = state.total === 0
+      ? "0 files"
+      : `${start}–${end} of ${state.total} ${state.total === 1 ? "file" : "files"}`;
+    $("prev").disabled = state.offset === 0;
+    $("next").disabled = end >= state.total;
+  }
+
+  // ---------- Upload ----------
+  let uploadQueue = Promise.resolve();
+
+  function enqueueUploads(fileList) {
+    for (const file of Array.from(fileList)) {
+      const progress = h("progress", { max: "1", value: "0" });
+      const status = h("span", { class: "upload-status" }, "Waiting");
+      const item = h("li", { class: "upload" }, [
+        h("span", { class: "upload-name", title: file.name }, file.name),
+        progress,
+        status,
+      ]);
+      $("uploads").prepend(item);
+      uploadQueue = uploadQueue.then(() => uploadOne(file, item, progress, status));
+    }
+  }
+
+  async function uploadOne(file, item, progress, status) {
+    if (!state.apiKey) {
+      item.remove();
+      return;
+    }
+    status.textContent = "Uploading";
+    try {
+      const meta = await uploadWithProgress(file, (fraction) => {
+        progress.value = fraction;
+        status.textContent = `${Math.round(fraction * 100)}%`;
+      });
+      progress.value = 1;
+      status.textContent = "Uploaded";
+      item.classList.add("done");
+      item.querySelector(".upload-name").textContent = meta.filename;
+      state.offset = 0;
+      refreshFiles();
+      setTimeout(() => item.remove(), 4000);
+    } catch (err) {
+      item.classList.add("failed");
+      progress.value = 1;
+      status.textContent = describe(err);
+      status.title = describe(err);
+      setTimeout(() => item.remove(), 12000);
+      if (err instanceof ApiError && err.status === 401) handleError(err);
+    }
+  }
+
+  // ---------- Links ----------
+  function openShare(file) {
+    state.shareFile = file;
+    $("share-filename").textContent = file.filename;
+    $("share-result").replaceChildren();
+    $("share-create").textContent = "Create link";
+    $("share-dialog").showModal();
+  }
+
+  async function createLink() {
+    const file = state.shareFile;
+    if (!file) return;
+    const choice = document.querySelector('input[name="ttl"]:checked');
+    const ttl = Number(choice ? choice.value : 3600);
+    const button = $("share-create");
+    setBusy(button, true);
+    try {
+      const link = await api(`/v1/files/${encodeURIComponent(file.id)}/links`, {
+        method: "POST",
+        json: { ttl_seconds: ttl },
+      });
+      const entry = {
+        fileId: file.id,
+        filename: file.filename,
+        url: link.url,
+        expiresIso: link.expires_at,
+        expiresAt: Date.parse(link.expires_at),
+        ttlMs: ttl * 1000,
+        fileDeleted: false,
+        views: [],
+      };
+      state.links.unshift(entry);
+      $("share-result").replaceChildren(renderTicket(entry, false));
+      renderTicketList();
+      button.textContent = "Create another link";
+      refreshFiles();
+    } catch (err) {
+      handleError(err, "Could not create link");
+    } finally {
+      setBusy(button, false);
+    }
+  }
+
+  function renderTicket(entry, removable) {
+    const urlInput = h("input", {
+      type: "text",
+      readonly: true,
+      value: entry.url,
+      "aria-label": `Download link for ${entry.filename}`,
+    });
+    urlInput.addEventListener("focus", () => urlInput.select());
+    const copyButton = h("button", { class: "btn btn-primary btn-small", type: "button" }, "Copy link");
+    copyButton.addEventListener("click", () => copyText(entry.url, copyButton, urlInput));
+    const openLink = h("a", {
+      class: "btn btn-quiet btn-small",
+      href: isHttpUrl(entry.url) ? entry.url : undefined,
+      target: "_blank",
+      rel: "noopener noreferrer",
+    }, "Open");
+    const countdown = h("span", { class: "countdown", role: "timer", "aria-live": "off" });
+    const label = h("span", { class: "stub-label" }, "remaining");
+    const drain = h("progress", { max: "1", value: "1", "aria-hidden": "true" });
+    const expiresLine = h("p", { class: "muted small" });
+
+    const card = h("div", { class: "ticket" }, [
+      h("div", { class: "ticket-main" }, [
+        h("p", { class: "ticket-file", title: entry.filename }, entry.filename),
+        h("div", { class: "url-row" }, [urlInput, copyButton, openLink]),
+        expiresLine,
+      ]),
+      h("div", { class: "ticket-stub" }, [countdown, label, drain]),
+    ]);
+    if (removable) {
+      card.append(h("button", {
+        class: "icon-btn ticket-remove",
+        type: "button",
+        "aria-label": "Remove from this list",
+        title: "Remove from this list (the link keeps working)",
+        onclick: () => {
+          state.links = state.links.filter((item) => item !== entry);
+          renderTicketList();
+        },
+      }, "\u00d7"));
+    }
+    entry.views.push({ card, countdown, label, drain, copyButton, openLink, expiresLine });
+    updateTicket(entry, Date.now());
+    return card;
+  }
+
+  function renderTicketList() {
+    for (const entry of state.links) {
+      entry.views = entry.views.filter((view) => !view.card.closest("#tickets"));
+    }
+    const items = state.links.map((entry) => h("li", {}, renderTicket(entry, true)));
+    $("tickets").replaceChildren(...items);
+    $("links-section").hidden = items.length === 0;
+  }
+
+  function updateTicket(entry, now) {
+    const remaining = entry.expiresAt - now;
+    const expired = !(remaining > 0);
+    const ended = expired || entry.fileDeleted;
+    const countdownText = entry.fileDeleted ? "Deleted" : expired ? "Expired" : formatRemaining(remaining);
+    const labelText = entry.fileDeleted ? "file removed" : expired ? "link no longer works" : "remaining";
+    const expiresText = `${expired ? "Expired" : "Expires"} ${formatDate(entry.expiresIso)}`;
+    for (const view of entry.views) {
+      view.card.classList.toggle("ended", ended);
+      if (view.countdown.textContent !== countdownText) view.countdown.textContent = countdownText;
+      if (view.label.textContent !== labelText) view.label.textContent = labelText;
+      if (view.expiresLine.textContent !== expiresText) view.expiresLine.textContent = expiresText;
+      view.drain.value = Math.max(0, Math.min(1, remaining / entry.ttlMs));
+      view.copyButton.disabled = ended;
+      view.openLink.setAttribute("aria-disabled", ended ? "true" : "false");
+    }
+  }
+
+  function tick() {
+    const now = Date.now();
+    for (const entry of state.links) {
+      entry.views = entry.views.filter((view) => view.card.isConnected);
+      updateTicket(entry, now);
+    }
+  }
+
+  async function copyText(text, button, input) {
+    let copied = false;
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
+    if (!copied) {
+      // Fallback for plain-HTTP deployments where the Clipboard API is unavailable.
+      input.focus();
+      input.select();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      }
+    }
+    if (copied) {
+      if (!button.dataset.label) button.dataset.label = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => {
+        button.textContent = button.dataset.label;
+      }, 1500);
+    } else {
+      toast("Copy failed. Select the link and copy it manually.", "error");
+    }
+  }
+
+  // ---------- Activity ----------
+  async function openAudit(file) {
+    $("audit-filename").textContent = file.filename;
+    const body = $("audit-rows");
+    body.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "muted" }, "Loading activity…")));
+    $("audit-dialog").showModal();
+    try {
+      const data = await api(`/v1/files/${encodeURIComponent(file.id)}/audit-events`);
+      if (data.items.length === 0) {
+        body.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "muted" }, "No activity recorded yet.")));
+        return;
+      }
+      body.replaceChildren(...data.items.map(renderAuditRow));
+    } catch (err) {
+      body.replaceChildren(h("tr", {}, h("td", { colspan: "5", class: "muted" }, "Activity could not be loaded.")));
+      handleError(err, "Could not load activity");
+    }
+  }
+
+  function renderAuditRow(event) {
+    const [label, className] = EVENT_LABELS[event.event_type] || [String(event.event_type), "event"];
+    let details = "";
+    if (event.event_type === "link.created") {
+      details = `Link ${shortId(event.link_id)}, expires ${formatDate(event.expires_at)}`;
+    } else if (event.event_type === "file.downloaded") {
+      details = event.link_id ? `Through link ${shortId(event.link_id)}` : "";
+    }
+    return h("tr", { title: event.user_agent || "" }, [
+      h("td", { class: "when" }, h("time", { datetime: event.created_at }, formatDate(event.created_at, true))),
+      h("td", {}, h("span", { class: className }, label)),
+      h("td", { class: "nowrap" }, event.actor_id || "Link recipient"),
+      h("td", {}, details),
+      h("td", { class: "mono" }, event.client_ip || ""),
+    ]);
+  }
+
+  // ---------- Delete ----------
+  function confirmDelete(file) {
+    state.pendingDelete = file;
+    $("confirm-filename").textContent = file.filename;
+    $("confirm-dialog").showModal();
+  }
+
+  async function deletePending() {
+    const file = state.pendingDelete;
+    if (!file) return;
+    const button = $("confirm-delete");
+    setBusy(button, true);
+    try {
+      await api(`/v1/files/${encodeURIComponent(file.id)}`, { method: "DELETE" });
+      $("confirm-dialog").close();
+      for (const entry of state.links) {
+        if (entry.fileId === file.id) entry.fileDeleted = true;
+      }
+      tick();
+      toast(`Deleted ${file.filename}`, "success");
+      refreshFiles();
+    } catch (err) {
+      $("confirm-dialog").close();
+      handleError(err, "Could not delete file");
+    } finally {
+      setBusy(button, false);
+      state.pendingDelete = null;
+    }
+  }
+
+  // ---------- Wiring ----------
+  function wire() {
+    $("connect").addEventListener("click", connect);
+    $("api-key").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") connect();
+    });
+    $("disconnect").addEventListener("click", () => disconnect(""));
+    $("refresh").addEventListener("click", refreshFiles);
+    $("prev").addEventListener("click", () => {
+      state.offset = Math.max(0, state.offset - state.limit);
+      refreshFiles();
+    });
+    $("next").addEventListener("click", () => {
+      state.offset += state.limit;
+      refreshFiles();
+    });
+
+    const dropzone = $("dropzone");
+    const fileInput = $("file-input");
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files && fileInput.files.length) enqueueUploads(fileInput.files);
+      fileInput.value = "";
+    });
+    let dragDepth = 0;
+    dropzone.addEventListener("dragenter", (event) => {
+      event.preventDefault();
+      dragDepth += 1;
+      dropzone.classList.add("over");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) dropzone.classList.remove("over");
+    });
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dragDepth = 0;
+      dropzone.classList.remove("over");
+      if (event.dataTransfer && event.dataTransfer.files.length) enqueueUploads(event.dataTransfer.files);
+    });
+    // Stop the browser from navigating away when a file is dropped outside the zone.
+    window.addEventListener("dragover", (event) => event.preventDefault());
+    window.addEventListener("drop", (event) => event.preventDefault());
+
+    $("share-create").addEventListener("click", createLink);
+    $("confirm-delete").addEventListener("click", deletePending);
+    for (const dialog of document.querySelectorAll("dialog")) {
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+      for (const closer of dialog.querySelectorAll("[data-close]")) {
+        closer.addEventListener("click", () => dialog.close());
+      }
+    }
+
+    // Tick faster than once per second so the display never lags a full second behind.
+    setInterval(tick, 250);
+    $("api-key").focus();
+  }
+
+  wire();
+})();
+</script>
+</body>
+</html>
